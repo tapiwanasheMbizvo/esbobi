@@ -19,6 +19,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.List;
 import java.util.Properties;
 
 @Controller
@@ -31,8 +32,8 @@ public class AppController {
     private String password = "root";
     // private String hosts_dir = "C:\\Users\\gaswaj\\.ssh\\known_hosts";
     //  private String hosts_dir = "C:\\Users\\tapiwanashem\\.ssh\\known_hosts";
-     private String upload_dir = "C:\\ESB\\upload\\";
-    //private String upload_dir = "/home/schidodo/KENAC/uploads/";
+     //private String upload_dir = "C:\\ESB\\upload\\";
+    private String upload_dir = "/home/ESBOBI/upload/";
 
 
 
@@ -50,6 +51,11 @@ public class AppController {
 
     }
 
+    @GetMapping("file-history")
+    String fileHistory(){
+
+        return "fileHistory";
+    }
     @GetMapping("upload-obi")
     String getFileUploadPage(Model model){
 
@@ -66,6 +72,31 @@ public class AppController {
 
     }
 
+    @PostMapping("/file-history")
+    public String getContents(@RequestParam("file") MultipartFile file, Model model){
+
+
+        List<RCPT101> rcpt101List;
+
+
+        String fileName = StringUtils.cleanPath(file.getOriginalFilename());
+        //lets remove underscores  here
+        fileName = fileName.replaceAll("_", "");
+
+        String tableName = fileName.substring(0, fileName.length() - 4);
+        tableName = tableName.replaceAll("_", "");
+        log.info("Lets look for the data in table "+tableName);
+
+
+
+        rcpt101List=  jdbcTemplate.query("select * FROM RCPT101 WHERE FILE_NAME  ='"+tableName+" ' ", new RCMapper());
+
+        rcpt101List.forEach(rcpt101 -> log.info("WE got "+rcpt101.getREFERENCE_REF()));
+        model.addAttribute("transactins", rcpt101List);
+
+
+        return "fileHistory";
+    }
     @PostMapping("/upload")
     public ResponseEntity uploadToLocalFileSystem(@RequestParam("file") MultipartFile file) {
 

@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+<head>
+    <title>FILE History</title>
+    <!-- Custom styles for this page -->
+
+</head>
+<body>
+
+<div layout:fragment="content">
+    <div class="container-fluid">
+
+        <!-- Page Heading -->
+        <div class="d-sm-flex align-items-center justify-content-between mb-4">
+            <h1 class="h3 mb-0 text-gray-800">Get File History</h1>
+        </div>
+
+        <!-- Content Row -->
+
+
+        <!-- Content Row -->
+
+        <div class="row">
+
+            <!-- Area Chart -->
+            <div class="col-xl-8 col-lg-7">
+                <div class="card shadow mb-4">
+                    <!-- Card Header - Dropdown -->
+                    <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                        <h6 class="m-0 font-weight-bold text-primary">OBI FILE UPLOAD</h6>
+
+                    </div>
+                    <!-- Card Body -->
+                    <div class="card-body">
+
+                        <form class="forms-sample" method="POST" enctype="multipart/form-data" action="/file-history">
+
+                            <div class="form-group">
+                                <label for="file">File To Check</label>
+                                <input type="file" class="form-control" id="file"  name="file" >
+                            </div>
+
+                            <button type="submit" class="btn btn-success mr-2">Upload File</button>
+
+                        </form>
+
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pie Chart -->
+
+        </div>
+        <div class="row">
+            <div class="col-xl-12 col-lg-7">
+
+                <div class="card  mb-4">
+                    <div class="card-header py-3">
+                        <h6 class="m-0 font-weight-bold text-primary">Transactions  In File</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
+                                <thead>
+
+                                <tr>
+                                    <th>ID</th>
+                                    <th>REF</th>
+                                    <th>ACCOUNT_NUMBER</th>
+                                    <th>CHARGE CODE</th>
+                                    <th>LOCATION</th>
+                                    <th>TERMINAL ID</th>
+                                    <th>MERCHANT ID</th>
+                                    <th>RN</th>
+                                    <th>RESPONSE</th>
+
+                                </tr>
+                                </thead>
+                                <tfoot>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>REF</th>
+                                    <th>ACCOUNT_NUMBER</th>
+                                    <th>CHARGE CODE</th>
+                                    <th>LOCATION</th>
+                                    <th>TERMINAL ID</th>
+                                    <th>MERCHANT ID</th>
+                                    <th>RN</th>
+                                    <th>RESPONSE</th>
+
+                                </tr>
+                                </tfoot>
+                                <tbody>
+                                <tr th:each="transaction : ${transactins}">
+                                    <td th:text="${transaction.getID()}">ID</td>
+
+                                    <td th:text="${transaction.getREFERENCE_REF()}">Ref</td>
+                                    <td th:text="${transaction.getACCOUNT_NUMBER()}">Ref</td>
+                                    <td th:text="${transaction.getFRONT_END_TRANSACTION_TYPE()}">Ref</td>
+                                    <td th:text="${transaction.getTRANSACTION_PLACE()}">Ref</td>
+                                    <td th:text="${transaction.getISO_TERMINAL_ID()}">Ref</td>
+                                    <td th:text="${transaction.getISO_MERCHANT_ID()}">Ref</td>
+                                    <td th:text="${transaction.getRETRIEVAL_REFERENCE_NUMBER()}">Ref</td>
+                                    <td th:text="${transaction.getEQ_RESPONSE()}">Ref</td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+
+            </div>
+        </div>
+
+        <!-- Content Row -->
+
+
+    </div>
+</div>
+
+<!-- Page level plugins -->
+
+</body>
+</html>
