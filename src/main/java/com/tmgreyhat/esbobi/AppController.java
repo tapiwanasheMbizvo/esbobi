@@ -85,7 +85,7 @@ public class AppController {
 
         String tableName = fileName.substring(0, fileName.length() - 4);
         tableName = tableName.replaceAll("_", "");
-        log.info("Lets look for the data in table "+tableName);
+        log.info("Searching for transactions in file   "+tableName);
 
 
 
