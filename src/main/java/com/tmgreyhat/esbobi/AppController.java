@@ -32,7 +32,7 @@ public class AppController {
     private String password = "root";
     // private String hosts_dir = "C:\\Users\\gaswaj\\.ssh\\known_hosts";
     //  private String hosts_dir = "C:\\Users\\tapiwanashem\\.ssh\\known_hosts";
-     //private String upload_dir = "C:\\ESB\\upload\\";
+   //private String upload_dir = "C:\\ESB\\upload\\";
     private String upload_dir = "/home/ESBOBI/upload/";
 
 
