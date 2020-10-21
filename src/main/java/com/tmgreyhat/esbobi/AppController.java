@@ -42,6 +42,9 @@ public class AppController {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    @Autowired
+    OBIFILEREPO obifilerepo;
+
     @GetMapping("/")
     String getIndexPage(Model model){
 
@@ -85,6 +88,7 @@ public class AppController {
 
         String tableName = fileName.substring(0, fileName.length() - 4);
         tableName = tableName.replaceAll("_", "");
+        tableName = tableName.toUpperCase();
         log.info("Searching for transactions in file   "+tableName);
 
 
@@ -98,19 +102,33 @@ public class AppController {
         return "fileHistory";
     }
     @PostMapping("/upload")
-    public ResponseEntity uploadToLocalFileSystem(@RequestParam("file") MultipartFile file) {
+    public String uploadToLocalFileSystem(@RequestParam("file") MultipartFile file, Model model) {
 
         if (file.isEmpty()){
 
+                model.addAttribute("msg", "No File Selected");
 
-            return ResponseEntity.ok("No FIle Selected");
+            return "upload";
         }
+
 
 
 
         String fileName = StringUtils.cleanPath(file.getOriginalFilename());
         //lets remove underscores  here
         fileName = fileName.replaceAll("_", "");
+        fileName = fileName.toUpperCase();
+        String tableName = fileName.substring(0, fileName.length() - 4);
+
+
+
+        if(fileUploadedBefore(tableName)){
+
+            model.addAttribute("msg", "FILE HAS BEEN UPLOADED BEFORE");
+
+            return "upload";
+        }
+
         Path path = Paths.get(upload_dir + file.getOriginalFilename().replaceAll("_", ""));
         try {
             Files.copy(file.getInputStream(), path, StandardCopyOption.REPLACE_EXISTING);
@@ -124,7 +142,7 @@ public class AppController {
                 .toUriString();
         //lets take the the file name and create a table remove file extension
 
-        String tableName = fileName.substring(0, fileName.length() - 4);
+
 
        /* if(!saveOBIRecord(tableName)){
 
@@ -134,7 +152,11 @@ public class AppController {
         createTable(tableName);
         log.info("Created database table "+tableName);
         doSftpTransfr(fileName);
-        return ResponseEntity.ok(fileDownloadUri);
+
+        model.addAttribute("msg", "File Uploaded");
+
+        return  "upload";
+        //return ResponseEntity.ok(fileDownloadUri);
     }
 
 
@@ -207,8 +229,10 @@ public class AppController {
         return  sftpChannel;
     }
 
+    boolean fileUploadedBefore(String file_name){
 
-
+        return  obifilerepo.findByFILENAME(file_name).isPresent();
+    }
 
 }
 
