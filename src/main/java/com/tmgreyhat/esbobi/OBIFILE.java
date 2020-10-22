@@ -8,6 +8,7 @@ import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import java.util.Date;
 
 @Data
 @Entity
@@ -23,5 +24,27 @@ public class OBIFILE {
     private  java.util.Date UPLOADEDON;
 
 
+    public long getID() {
+        return ID;
+    }
 
+    public void setID(long ID) {
+        this.ID = ID;
+    }
+
+    public String getFILENAME() {
+        return FILENAME;
+    }
+
+    public void setFILENAME(String FILENAME) {
+        this.FILENAME = FILENAME;
+    }
+
+    public Date getUPLOADEDON() {
+        return UPLOADEDON;
+    }
+
+    public void setUPLOADEDON(Date UPLOADEDON) {
+        this.UPLOADEDON = UPLOADEDON;
+    }
 }

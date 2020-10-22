@@ -129,6 +129,10 @@ public class AppController {
             return "upload";
         }
 
+        OBIFILE obifile = new OBIFILE();
+        obifile.setFILENAME(tableName);
+        obifilerepo.save(obifile);
+
         Path path = Paths.get(upload_dir + file.getOriginalFilename().replaceAll("_", ""));
         try {
             Files.copy(file.getInputStream(), path, StandardCopyOption.REPLACE_EXISTING);
