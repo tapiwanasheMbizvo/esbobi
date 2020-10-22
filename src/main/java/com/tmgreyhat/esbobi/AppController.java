@@ -32,8 +32,8 @@ public class AppController {
     private String password = "root";
     // private String hosts_dir = "C:\\Users\\gaswaj\\.ssh\\known_hosts";
     //  private String hosts_dir = "C:\\Users\\tapiwanashem\\.ssh\\known_hosts";
-   //private String upload_dir = "C:\\ESB\\upload\\";
-    private String upload_dir = "/home/ESBOBI/upload/";
+   private String upload_dir = "C:\\ESB\\upload\\";
+    //private String upload_dir = "/home/ESBOBI/upload/";
 
 
 
@@ -41,9 +41,6 @@ public class AppController {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
-
-    @Autowired
-    OBIFILEREPO obifilerepo;
 
     @GetMapping("/")
     String getIndexPage(Model model){
@@ -128,6 +125,8 @@ public class AppController {
 
             return "upload";
         }
+
+       jdbcTemplate.execute("INSERT INTO FILEUPLOADS(FILENAME) VALUES ('"+tableName+"')");
 
         Path path = Paths.get(upload_dir + file.getOriginalFilename().replaceAll("_", ""));
         try {
@@ -231,7 +230,12 @@ public class AppController {
 
     boolean fileUploadedBefore(String file_name){
 
-        return  obifilerepo.findByFILENAME(file_name).isPresent();
+        List<OBIFILE> obifiles;
+
+        obifiles= jdbcTemplate.query("SELECT * FROM FILEUPLOADS WHERE FILENAME = '"+file_name+"' ", new OBIFILEMapper());
+
+
+        return !obifiles.isEmpty();
     }
 
 }

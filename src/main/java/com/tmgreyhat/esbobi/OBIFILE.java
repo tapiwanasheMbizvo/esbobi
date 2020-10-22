@@ -1,27 +1,36 @@
 package com.tmgreyhat.esbobi;
 
-import lombok.Data;
-import org.hibernate.annotations.Generated;
-import org.hibernate.annotations.GenerationTime;
+import java.util.Date;
 
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
-
-@Data
-@Entity
-@javax.persistence.Table(name = "EQTRANSFER",schema = "DB2INST1")
 public class OBIFILE {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long ID;
     private String FILENAME;
 
-    @Generated(GenerationTime.INSERT)
-    private  java.util.Date UPLOADEDON;
+    private java.util.Date UPLOADTIME;
 
+    public Date getUPLOADTIME() {
+        return UPLOADTIME;
+    }
 
+    public void setUPLOADTIME(Date UPLOADTIME) {
+        this.UPLOADTIME = UPLOADTIME;
+    }
 
+    public long getID() {
+        return ID;
+    }
+
+    public void setID(long ID) {
+        this.ID = ID;
+    }
+
+    public String getFILENAME() {
+        return FILENAME;
+    }
+
+    public void setFILENAME(String FILENAME) {
+        this.FILENAME = FILENAME;
+    }
 }
+
