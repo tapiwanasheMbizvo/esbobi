@@ -21,44 +21,12 @@
 
 
         <!-- Content Row -->
-
-        <div class="row">
-
-            <!-- Area Chart -->
-            <div class="col-xl-8 col-lg-7">
-                <div class="card shadow mb-4">
-                    <!-- Card Header - Dropdown -->
-                    <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
-                        <h6 class="m-0 font-weight-bold text-primary">OBI FILE UPLOAD</h6>
-
-                    </div>
-                    <!-- Card Body -->
-                    <div class="card-body">
-
-                        <form class="forms-sample" method="POST" enctype="multipart/form-data" action="/file-history">
-
-                            <div class="form-group">
-                                <label for="file">File To Check</label>
-                                <input type="file" class="form-control" id="file"  name="file" >
-                            </div>
-
-                            <button type="submit" class="btn btn-success mr-2">Upload File</button>
-
-                        </form>
-
-                    </div>
-                </div>
-            </div>
-
-            <!-- Pie Chart -->
-
-        </div>
         <div class="row">
             <div class="col-xl-12 col-lg-7">
 
                 <div class="card  mb-4">
                     <div class="card-header py-3">
-                        <h6 class="m-0 font-weight-bold text-primary">Transactions  In File</h6>
+                        <h6 class="m-0 font-weight-bold text-primary">MANAGE OBI FILES </h6>
                     </div>
                     <div class="card-body">
                         <div class="table-responsive">
@@ -66,45 +34,70 @@
                                 <thead>
 
                                 <tr>
-                                    <th>ID</th>
-                                    <th>REF</th>
-                                    <th>ACCOUNT_NUMBER</th>
-                                    <th>CHARGE CODE</th>
-                                    <th>LOCATION</th>
-                                    <th>TERMINAL ID</th>
-                                    <th>MERCHANT ID</th>
-                                    <th>RN</th>
-                                    <th>RESPONSE</th>
+
+                                    <th>FILENAME</th>
+                                    <th>UPLOADED ON</th>
+                                    <th>UPLOADED BY</th>
+                                    <th>STATUS</th>
+                                    <th>POSTED ON</th>
+                                    <th>POSTED BY</th>
+                                    <th>COUNT</th>
+                                    <th>VALUE</th>
+                                    <th>OPTIONS</th>
+
 
                                 </tr>
                                 </thead>
-                                <tfoot>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>REF</th>
-                                    <th>ACCOUNT_NUMBER</th>
-                                    <th>CHARGE CODE</th>
-                                    <th>LOCATION</th>
-                                    <th>TERMINAL ID</th>
-                                    <th>MERCHANT ID</th>
-                                    <th>RN</th>
-                                    <th>RESPONSE</th>
-
-                                </tr>
-                                </tfoot>
                                 <tbody>
-                                <tr th:each="transaction : ${transactins}">
-                                    <td th:text="${transaction.getID()}">ID</td>
 
-                                    <td th:text="${transaction.getREFERENCE_REF()}">Ref</td>
-                                    <td th:text="${transaction.getACCOUNT_NUMBER()}">Ref</td>
-                                    <td th:text="${transaction.getFRONT_END_TRANSACTION_TYPE()}">Ref</td>
-                                    <td th:text="${transaction.getTRANSACTION_PLACE()}">Ref</td>
-                                    <td th:text="${transaction.getISO_TERMINAL_ID()}">Ref</td>
-                                    <td th:text="${transaction.getISO_MERCHANT_ID()}">Ref</td>
-                                    <td th:text="${transaction.getRETRIEVAL_REFERENCE_NUMBER()}">Ref</td>
-                                    <td th:text="${transaction.getEQ_RESPONSE()}">Ref</td>
+                                <tr th:each="obifile : ${obifiles}">
+                                    <td th:text="${obifile.getFILENAME()}">File Name</td>
+                                    <td th:text="${obifile.getUPLOADTIME()}">Upload Time</td>
+
+                                    <td th:text="${obifile.getUPLOADEDBY()}">Upload Time</td>
+                                    <td th:text="${obifile.getStatus()}">Upload Time</td>
+                                    <td th:text="${obifile.getPOSTEDON()}">Upload Time</td>
+                                    <td th:text="${obifile.getPOSTEDBY()}">Upload Time</td>
+                                    <td>count</td>
+                                    <td>value</td>
+                                    <td>
+
+                                        <a th:href="|/file-history/${obifile.getID()}|">
+                                            <button class="btn-pull-left btn btn-sm btn-primary">
+                                                OPEN
+                                            </button>
+                                        </a>
+                                            <br/>
+                                        <a th:href="|/post-file/${obifile.getFILENAME()}|">
+                                            <button class="btn-pull-right btn btn-sm btn-success">
+                                            POST FILE
+                                            </button>
+                                        </a>
+                                </td>
                                 </tr>
+
+                                <!--<tr th:each="obifile : ${obifiles}">
+
+
+                                       <td th:text="${obifile.getFILENAME()}">File Name</td>
+                                    <td th:text="${obifile.getUPLOADTIME()}">Upload Time</td>
+                                    <td th:text="${obifile.getUPLOADEDBY()}">Upload Time</td>
+                                    <td th:text="${obifile.getSTATUS()}">Upload Time</td>
+                                    <td th:text="${obifile.getPOSTEDON()}">Upload Time</td>
+                                    <td th:text="${obifile.getPOSTEDBY()}">Upload Time</td>
+
+                                    <th>24</th>
+                                    <th>$2400</th>
+                                    <td>
+                                        <a th:href="|/file-history/${obifile.getID()}|">
+                                        View Transactions
+                                    </a>
+                                        <a th:href="|post-flie/${obifile.getFILENAME()}|">POST</a>
+                                    </td>
+
+
+                                </tr>-->
+
                                 </tbody>
                             </table>
                         </div>

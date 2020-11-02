@@ -23,37 +23,6 @@
         <!-- Content Row -->
 
         <div class="row">
-
-            <!-- Area Chart -->
-            <div class="col-xl-8 col-lg-7">
-                <div class="card shadow mb-4">
-                    <!-- Card Header - Dropdown -->
-                    <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
-                        <h6 class="m-0 font-weight-bold text-primary">OBI FILE UPLOAD</h6>
-
-                    </div>
-                    <!-- Card Body -->
-                    <div class="card-body">
-
-                        <form class="forms-sample" method="POST" enctype="multipart/form-data" action="/file-history">
-
-                            <div class="form-group">
-                                <label for="file">File To Check</label>
-                                <input type="file" class="form-control" id="file"  name="file" >
-                            </div>
-
-                            <button type="submit" class="btn btn-success mr-2">Upload File</button>
-
-                        </form>
-
-                    </div>
-                </div>
-            </div>
-
-            <!-- Pie Chart -->
-
-        </div>
-        <div class="row">
             <div class="col-xl-12 col-lg-7">
 
                 <div class="card  mb-4">
@@ -67,28 +36,28 @@
 
                                 <tr>
                                     <th>ID</th>
-                                    <th>REF</th>
+
                                     <th>ACCOUNT_NUMBER</th>
                                     <th>CHARGE CODE</th>
                                     <th>LOCATION</th>
                                     <th>TERMINAL ID</th>
-                                    <th>MERCHANT ID</th>
+                                    <th>AMOUNT</th>
                                     <th>RN</th>
-                                    <th>RESPONSE</th>
+                                    <th>STATUS</th>
 
                                 </tr>
                                 </thead>
                                 <tfoot>
                                 <tr>
                                     <th>ID</th>
-                                    <th>REF</th>
+
                                     <th>ACCOUNT_NUMBER</th>
                                     <th>CHARGE CODE</th>
                                     <th>LOCATION</th>
                                     <th>TERMINAL ID</th>
-                                    <th>MERCHANT ID</th>
+                                    <th>AMOUNT</th>
                                     <th>RN</th>
-                                    <th>RESPONSE</th>
+                                    <th>STATUS</th>
 
                                 </tr>
                                 </tfoot>
@@ -96,12 +65,15 @@
                                 <tr th:each="transaction : ${transactins}">
                                     <td th:text="${transaction.getID()}">ID</td>
 
-                                    <td th:text="${transaction.getREFERENCE_REF()}">Ref</td>
+
                                     <td th:text="${transaction.getACCOUNT_NUMBER()}">Ref</td>
                                     <td th:text="${transaction.getFRONT_END_TRANSACTION_TYPE()}">Ref</td>
                                     <td th:text="${transaction.getTRANSACTION_PLACE()}">Ref</td>
                                     <td th:text="${transaction.getISO_TERMINAL_ID()}">Ref</td>
-                                    <td th:text="${transaction.getISO_MERCHANT_ID()}">Ref</td>
+                                    <td th:text="${
+                                    transaction.getAMOUNT()
+
+                                    }">Ref</td>
                                     <td th:text="${transaction.getRETRIEVAL_REFERENCE_NUMBER()}">Ref</td>
                                     <td th:text="${transaction.getEQ_RESPONSE()}">Ref</td>
                                 </tr>
