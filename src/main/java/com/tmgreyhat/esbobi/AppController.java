@@ -9,6 +9,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
@@ -32,7 +33,7 @@ public class AppController {
     private String password = "root";
     // private String hosts_dir = "C:\\Users\\gaswaj\\.ssh\\known_hosts";
     //  private String hosts_dir = "C:\\Users\\tapiwanashem\\.ssh\\known_hosts";
-   //private String upload_dir = "C:\\ESB\\upload\\";
+    //private String upload_dir = "C:\\ESB\\upload\\";
     private String upload_dir = "/home/ESBOBI/upload/";
 
 
@@ -41,9 +42,6 @@ public class AppController {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
-
-    @Autowired
-    OBIFILEREPO obifilerepo;
 
     @GetMapping("/")
     String getIndexPage(Model model){
@@ -54,11 +52,7 @@ public class AppController {
 
     }
 
-    @GetMapping("file-history")
-    String fileHistory(){
 
-        return "fileHistory";
-    }
     @GetMapping("upload-obi")
     String getFileUploadPage(Model model){
 
@@ -76,24 +70,19 @@ public class AppController {
     }
 
     @PostMapping("/file-history")
-    public String getContents(@RequestParam("file") MultipartFile file, Model model){
+    @GetMapping(value = "/{filename}")
+    public String getContents(@PathVariable(name = "filename") String filename, Model model){
 
 
         List<RCPT101> rcpt101List;
 
 
-        String fileName = StringUtils.cleanPath(file.getOriginalFilename());
-        //lets remove underscores  here
-        fileName = fileName.replaceAll("_", "");
 
-        String tableName = fileName.substring(0, fileName.length() - 4);
-        tableName = tableName.replaceAll("_", "");
-        tableName = tableName.toUpperCase();
-        log.info("Searching for transactions in file   "+tableName);
+        log.info("Searching for transactions in file   "+filename);
 
 
 
-        rcpt101List=  jdbcTemplate.query("select * FROM RCPT101 WHERE FILE_NAME  ='"+tableName+" ' ", new RCMapper());
+        rcpt101List=  jdbcTemplate.query("select * FROM RCPT101 WHERE FILE_NAME  ='"+filename+" ' ", new RCMapper());
 
         rcpt101List.forEach(rcpt101 -> log.info("WE got "+rcpt101.getREFERENCE_REF()));
         model.addAttribute("transactins", rcpt101List);
@@ -106,7 +95,7 @@ public class AppController {
 
         if (file.isEmpty()){
 
-                model.addAttribute("msg", "No File Selected");
+            model.addAttribute("msg", "No File Selected");
 
             return "upload";
         }
@@ -129,9 +118,7 @@ public class AppController {
             return "upload";
         }
 
-        OBIFILE obifile = new OBIFILE();
-        obifile.setFILENAME(tableName);
-        obifilerepo.save(obifile);
+        jdbcTemplate.execute("INSERT INTO FILEUPLOADS(FILENAME) VALUES ('"+tableName+"')");
 
         Path path = Paths.get(upload_dir + file.getOriginalFilename().replaceAll("_", ""));
         try {
@@ -235,7 +222,12 @@ public class AppController {
 
     boolean fileUploadedBefore(String file_name){
 
-        return  obifilerepo.findByFILENAME(file_name).isPresent();
+        List<OBIFILE> obifiles;
+
+        obifiles= jdbcTemplate.query("SELECT * FROM FILEUPLOADS WHERE FILENAME = '"+file_name+"' ", new OBIFILEMapper());
+
+
+        return !obifiles.isEmpty();
     }
 
 }
