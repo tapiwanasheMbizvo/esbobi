@@ -40,7 +40,9 @@ public class OBIFILEController {
 
 
 
-    private String remoteDir = "/var/OBI/upload/failsafe/";
+    private String remoteDirOBI = "/var/ESBUPLOADS/OBI/";
+    private String remoteDirAUTOPAY = "/var/ESBUPLOADS/AUTOPAY/";
+
 
     @Autowired
     JdbcTemplate jdbcTemplate;
@@ -102,7 +104,7 @@ public class OBIFILEController {
     }
 
     @PostMapping("/upload")
-    public String uploadToLocalFileSystem(@RequestParam("file") MultipartFile file, Model model) {
+    public String uploadToLocalFileSystem(@RequestParam("file") MultipartFile file,@RequestParam("file_type") String file_type, Model model) {
 
         if (file.isEmpty()){
 
@@ -126,7 +128,7 @@ public class OBIFILEController {
             return "upload";
         }
 
-        jdbcTemplate.execute("INSERT INTO FILEUPLOADS(FILENAME) VALUES ('"+tableName+"')");
+        jdbcTemplate.execute("INSERT INTO FILEUPLOADS(FILENAME, FILE_TYPE) VALUES ('"+tableName+"', '"+file_type+"')");
 
 
         Path path = Paths.get(upload_dir + file.getOriginalFilename().replaceAll("_", "").toUpperCase());
@@ -139,9 +141,13 @@ public class OBIFILEController {
 
 
 
-        createTable(tableName);
+        if(file_type.equalsIgnoreCase("OBI")){
+            createTable(tableName);
+            log.info("Created database table "+tableName);
+        }
 
-        log.info("Created database table "+tableName);
+
+
 
 
         model.addAttribute("msg", "File Uploaded");
@@ -155,7 +161,7 @@ public class OBIFILEController {
         String ogfilename = filename;
         filename = filename.toUpperCase();
         filename = filename+".TXT";
-
+        List<OBIFILE> obifiles;
 
         if(postedBefore(ogfilename)){
             model.addAttribute("msg", "FILE HAS BEEN POSTED BEFORE "+filename);
@@ -164,9 +170,11 @@ public class OBIFILEController {
         }
         log.info("file dire "+upload_dir+filename);
 
+        obifiles =  jdbcTemplate.query("select * FROM FILEUPLOADS WHERE FILENAME  ='"+ogfilename+"'  ", new OBIFILEMapper());
 
+        String file_type = obifiles.get(0).getFILE_TYPE();
 
-        doSftpTransfr(filename);
+        doSftpTransfr(filename, file_type);
         jdbcTemplate.execute("UPDATE FILEUPLOADS SET POSTEDON = current_timestamp, STATUS = 'POSTED', POSTEDBY=1 WHERE FILENAME='"+ogfilename+"'");
 
         return  "redirect:/obi-files";
@@ -193,8 +201,16 @@ public class OBIFILEController {
 
     }
 
-    void doSftpTransfr(String fileName){
+    void doSftpTransfr(String fileName, String file_type){
 
+        String remoteDir;
+        if(file_type.equalsIgnoreCase("OBI")){
+
+            remoteDir = remoteDirOBI;
+        }else{
+
+            remoteDir = remoteDirAUTOPAY;
+        }
         try {
 
             this.getCon().put(upload_dir+fileName, remoteDir+fileName);

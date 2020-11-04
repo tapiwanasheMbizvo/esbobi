@@ -12,7 +12,7 @@
 
         <!-- Page Heading -->
         <div class="d-sm-flex align-items-center justify-content-between mb-4">
-            <h1 class="h3 mb-0 text-gray-800">File Upload</h1>
+            <h1 class="h3 mb-0 text-gray-800">AUTOPAY File Upload</h1>
         </div>
 
         <!-- Content Row -->
@@ -27,7 +27,7 @@
                 <div class="card shadow mb-4">
                     <!-- Card Header - Dropdown -->
                     <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
-                        <h6 class="m-0 font-weight-bold text-primary"> FILE UPLOAD</h6>
+                        <h6 class="m-0 font-weight-bold text-primary">AUTOPAY FILE UPLOAD</h6>
 
 
 
@@ -35,18 +35,11 @@
                     <!-- Card Body -->
                     <div class="card-body">
 
-                        <form class="forms-sample" method="POST" enctype="multipart/form-data" action="/upload">
+                        <form class="forms-sample" method="POST" enctype="multipart/form-data" action="/upload-autopay">
 
                             <div class="form-group">
                                 <label for="file">File To Upload</label>
                                 <input type="file" class="form-control" id="file"  name="file" >
-                            </div>
-                            <div class="form-group">
-                                <label for="file_type">FILE TYPE</label>
-                                <select class="form-control" id="file_type" name="file_type">
-                                    <option>OBI</option>
-                                    <option>AUTOPAY</option>
-                                </select>
                             </div>
 
                             <button type="submit" class="btn btn-success mr-2">Upload File</button>

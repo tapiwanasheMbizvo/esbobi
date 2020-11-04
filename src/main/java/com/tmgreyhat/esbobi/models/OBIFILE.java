@@ -7,6 +7,7 @@ public class OBIFILE {
 
     private long ID;
     private String FILENAME;
+    private String FILE_TYPE;
 
     private Timestamp UPLOADTIME;
 
@@ -18,6 +19,14 @@ public class OBIFILE {
     private String status;
     private double value;
 
+
+    public String getFILE_TYPE() {
+        return FILE_TYPE;
+    }
+
+    public void setFILE_TYPE(String FILE_TYPE) {
+        this.FILE_TYPE = FILE_TYPE;
+    }
 
     public String getStatus() {
         return status;

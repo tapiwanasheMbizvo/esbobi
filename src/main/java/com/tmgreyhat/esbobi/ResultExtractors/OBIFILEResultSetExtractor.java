@@ -19,6 +19,7 @@ public class OBIFILEResultSetExtractor implements ResultSetExtractor {
         obifile.setUPLOADEDBY(resultSet.getLong("UPLOADEDBY"));
         obifile.setPOSTEDBY(resultSet.getLong("POSTEDBY"));
         obifile.setStatus(resultSet.getString("STATUS"));
+        obifile.setFILE_TYPE(resultSet.getString("FILE_TYPE"));
 
         return  obifile;
     }
