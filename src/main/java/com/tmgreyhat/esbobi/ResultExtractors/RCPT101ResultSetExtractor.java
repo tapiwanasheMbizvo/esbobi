@@ -1,5 +1,6 @@
-package com.tmgreyhat.esbobi;
+package com.tmgreyhat.esbobi.ResultExtractors;
 
+import com.tmgreyhat.esbobi.models.RCPT101;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.ResultSetExtractor;
 
@@ -24,6 +25,7 @@ public class RCPT101ResultSetExtractor implements ResultSetExtractor {
         rcpt101.setISO_MERCHANT_ID(resultSet.getString("ISO_MERCHANT_ID"));
         rcpt101.setRETRIEVAL_REFERENCE_NUMBER(resultSet.getString("RETRIEVAL_REFERENCE_NUMBER"));
         rcpt101.setEQ_RESPONSE(resultSet.getString("EQ_RESPONSE"));
+        rcpt101.setAMOUNT(resultSet.getString("AMOUNT"));
 
 
         return  rcpt101;

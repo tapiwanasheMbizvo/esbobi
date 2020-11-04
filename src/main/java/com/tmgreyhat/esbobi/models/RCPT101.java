@@ -1,4 +1,4 @@
-package com.tmgreyhat.esbobi;
+package com.tmgreyhat.esbobi.models;
 
 import java.math.BigInteger;
 
@@ -14,6 +14,7 @@ public class RCPT101 {
     private String ISO_MERCHANT_ID;
     private String RETRIEVAL_REFERENCE_NUMBER;
     private String EQ_RESPONSE;
+    private String AMOUNT;
 
     public RCPT101() {
     }
@@ -78,6 +79,26 @@ public class RCPT101 {
         return EQ_RESPONSE;
     }
 
+    public String computeResponse(){
+
+
+        if(getEQ_RESPONSE().isEmpty()){
+
+            return "FAILED";
+        }else {
+
+            if(getEQ_RESPONSE().contains("success")){
+
+                return  "SUCCESS";
+            }else{
+
+
+                return "FAILED";
+            }
+        }
+
+    }
+
     public void setEQ_RESPONSE(String EQ_RESPONSE) {
         this.EQ_RESPONSE = EQ_RESPONSE;
     }
@@ -96,5 +117,14 @@ public class RCPT101 {
 
     public void setREFERENCE_REF(String REFERENCE_REF) {
         this.REFERENCE_REF = REFERENCE_REF;
+    }
+
+    public String getAMOUNT() {
+
+        return String.valueOf(Integer.valueOf(AMOUNT)/100);
+    }
+
+    public void setAMOUNT(String AMOUNT) {
+        this.AMOUNT = AMOUNT;
     }
 }

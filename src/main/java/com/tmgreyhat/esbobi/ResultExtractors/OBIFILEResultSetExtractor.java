@@ -1,5 +1,6 @@
-package com.tmgreyhat.esbobi;
+package com.tmgreyhat.esbobi.ResultExtractors;
 
+import com.tmgreyhat.esbobi.models.OBIFILE;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.ResultSetExtractor;
 
@@ -10,10 +11,14 @@ public class OBIFILEResultSetExtractor implements ResultSetExtractor {
     @Override
     public Object extractData(ResultSet resultSet) throws SQLException, DataAccessException {
         OBIFILE obifile = new OBIFILE();
-        //rcpt101.setID(BigInteger.valueOf(resultSet.getLong("ID")));
+
         obifile.setFILENAME(resultSet.getString("FILENAME"));
-        obifile.setUPLOADTIME(resultSet.getDate("UPLOADTIME"));
+        obifile.setUPLOADTIME(resultSet.getTimestamp("UPLOADTIME"));
         obifile.setID(resultSet.getLong("ID"));
+        obifile.setPOSTEDON(resultSet.getTimestamp("POSTEDON"));
+        obifile.setUPLOADEDBY(resultSet.getLong("UPLOADEDBY"));
+        obifile.setPOSTEDBY(resultSet.getLong("POSTEDBY"));
+        obifile.setStatus(resultSet.getString("STATUS"));
 
         return  obifile;
     }

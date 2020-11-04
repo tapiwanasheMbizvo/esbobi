@@ -1,14 +1,16 @@
-package com.tmgreyhat.esbobi;
+package com.tmgreyhat.esbobi.mappers;
+
+import com.tmgreyhat.esbobi.ResultExtractors.RCPT101ResultSetExtractor;
 import org.springframework.jdbc.core.RowMapper;
+
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
-public class OBIFILEMapper  implements RowMapper {
-
+public class RCMapper implements RowMapper {
     @Override
     public Object mapRow(ResultSet resultSet, int i) throws SQLException {
 
-        OBIFILEResultSetExtractor extractor= new OBIFILEResultSetExtractor() ;
+        RCPT101ResultSetExtractor extractor= new RCPT101ResultSetExtractor() ;
         return  extractor.extractData(resultSet);
     }
 }

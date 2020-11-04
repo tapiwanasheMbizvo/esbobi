@@ -1,9 +1,12 @@
-package com.tmgreyhat.esbobi;
+package com.tmgreyhat.esbobi.controllers;
 
 import com.jcraft.jsch.*;
+import com.tmgreyhat.esbobi.mappers.OBIFILEMapper;
+import com.tmgreyhat.esbobi.mappers.RCMapper;
+import com.tmgreyhat.esbobi.models.OBIFILE;
+import com.tmgreyhat.esbobi.models.RCPT101;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -13,7 +16,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -25,7 +27,7 @@ import java.util.Properties;
 
 @Controller
 @Slf4j
-public class AppController {
+public class OBIFILEController {
 
 
     private String remoteHost = "10.136.192.172";
@@ -33,63 +35,72 @@ public class AppController {
     private String password = "root";
     // private String hosts_dir = "C:\\Users\\gaswaj\\.ssh\\known_hosts";
     //  private String hosts_dir = "C:\\Users\\tapiwanashem\\.ssh\\known_hosts";
-    //private String upload_dir = "C:\\ESB\\upload\\";
-    private String upload_dir = "/home/ESBOBI/upload/";
+    private String upload_dir = "C:\\ESB\\upload\\";
+    //private String upload_dir = "/home/ESBOBI/upload/";
 
 
 
-    private String remoteDir = "/balance_enq/OBI/upload/";
+    private String remoteDir = "/var/OBI/upload/failsafe/";
 
     @Autowired
-    private JdbcTemplate jdbcTemplate;
-
-    @GetMapping("/")
-    String getIndexPage(Model model){
+    JdbcTemplate jdbcTemplate;
 
 
 
-        return "index";
+    @GetMapping("obi-files")
+    String fileList(Model model){
 
+        List<OBIFILE> obifiles;
+
+
+        obifiles= jdbcTemplate.query("SELECT * FROM FILEUPLOADS  ", new OBIFILEMapper());
+
+        model.addAttribute("obifiles", obifiles);
+
+
+        return "allfiles";
     }
 
 
-    @GetMapping("upload-obi")
-    String getFileUploadPage(Model model){
+
+    @GetMapping("/file-history/{id}")
+    public String getContents(@PathVariable(name = "id") Long id, Model model){
 
 
-        return  "upload";
-
-    }
-
-    @GetMapping("obi-history")
-    String obiHistory(Model model){
+        List<OBIFILE> obifileList;
+        List<RCPT101> bulked;
+        List<RCPT101> nonebulked;
 
 
-        return  "history";
-
-    }
-
-    @PostMapping("/file-history")
-    @GetMapping(value = "/{filename}")
-    public String getContents(@PathVariable(name = "filename") String filename, Model model){
-
-
-        List<RCPT101> rcpt101List;
+        log.info("Searching for transactions in file  with id  "+id);
 
 
 
-        log.info("Searching for transactions in file   "+filename);
+        obifileList=  jdbcTemplate.query("select * FROM FILEUPLOADS WHERE ID  ="+id+"  ", new OBIFILEMapper());
+
+
+        if(obifileList.isEmpty()){
+
+            model.addAttribute("msg", "NO FILES FOUND");
+        }
+
+        OBIFILE obifile = obifileList.get(0);
 
 
 
-        rcpt101List=  jdbcTemplate.query("select * FROM RCPT101 WHERE FILE_NAME  ='"+filename+" ' ", new RCMapper());
+        bulked =  jdbcTemplate.query("select * FROM RCPT101 WHERE FILE_NAME  ='"+obifile.getFILENAME()+" ' AND FRONT_END_TRANSACTION_TYPE IN (select CHARGECODE from OBICHARGE where IS_BULKED=1) ", new RCMapper());
+        nonebulked =  jdbcTemplate.query("select * FROM RCPT101 WHERE FILE_NAME  ='"+obifile.getFILENAME()+" ' AND FRONT_END_TRANSACTION_TYPE IN (select CHARGECODE from OBICHARGE where IS_BULKED=0)", new RCMapper());
 
-        rcpt101List.forEach(rcpt101 -> log.info("WE got "+rcpt101.getREFERENCE_REF()));
-        model.addAttribute("transactins", rcpt101List);
+        log.info("we got bulked "+ bulked.size());
+        log.info("we got NONE  bulked "+ nonebulked.size());
+
+        model.addAttribute("bullked", bulked);
+        model.addAttribute("nonebulked", nonebulked);
 
 
         return "fileHistory";
     }
+
     @PostMapping("/upload")
     public String uploadToLocalFileSystem(@RequestParam("file") MultipartFile file, Model model) {
 
@@ -97,19 +108,16 @@ public class AppController {
 
             model.addAttribute("msg", "No File Selected");
 
-            return "upload";
+            return "redirect:/upload-obi";
         }
 
 
-
-
         String fileName = StringUtils.cleanPath(file.getOriginalFilename());
-        //lets remove underscores  here
         fileName = fileName.replaceAll("_", "");
-        fileName = fileName.toUpperCase();
+
         String tableName = fileName.substring(0, fileName.length() - 4);
-
-
+        tableName = tableName.toUpperCase();
+        tableName = tableName.replaceAll("_", "");
 
         if(fileUploadedBefore(tableName)){
 
@@ -120,42 +128,49 @@ public class AppController {
 
         jdbcTemplate.execute("INSERT INTO FILEUPLOADS(FILENAME) VALUES ('"+tableName+"')");
 
-        Path path = Paths.get(upload_dir + file.getOriginalFilename().replaceAll("_", ""));
+
+        Path path = Paths.get(upload_dir + file.getOriginalFilename().replaceAll("_", "").toUpperCase());
         try {
             Files.copy(file.getInputStream(), path, StandardCopyOption.REPLACE_EXISTING);
         } catch (IOException e) {
             e.printStackTrace();
         }
         log.info("DONE UPLOADING TO LOCAL DIR");
-        String fileDownloadUri = ServletUriComponentsBuilder.fromCurrentContextPath()
-                .path(upload_dir)
-                .path(fileName)
-                .toUriString();
-        //lets take the the file name and create a table remove file extension
 
 
 
-       /* if(!saveOBIRecord(tableName)){
-
-            return  ResponseEntity.ok("File has been uploaded before ");
-        }
-*/
         createTable(tableName);
+
         log.info("Created database table "+tableName);
-        doSftpTransfr(fileName);
+
 
         model.addAttribute("msg", "File Uploaded");
 
-        return  "upload";
-        //return ResponseEntity.ok(fileDownloadUri);
+        return  "redirect:/obi-files";
+
     }
+    @GetMapping("/post-file/{filename}")
+    public String postFile (@PathVariable(name = "filename") String filename, Model model){
+
+        String ogfilename = filename;
+        filename = filename.toUpperCase();
+        filename = filename+".TXT";
+
+
+        if(postedBefore(ogfilename)){
+            model.addAttribute("msg", "FILE HAS BEEN POSTED BEFORE "+filename);
+
+            return "redirect:/obi-files";
+        }
+        log.info("file dire "+upload_dir+filename);
 
 
 
+        doSftpTransfr(filename);
+        jdbcTemplate.execute("UPDATE FILEUPLOADS SET POSTEDON = current_timestamp, STATUS = 'POSTED', POSTEDBY=1 WHERE FILENAME='"+ogfilename+"'");
 
-
-
-
+        return  "redirect:/obi-files";
+    }
 
     void createTable(String tableName){
 
@@ -182,8 +197,9 @@ public class AppController {
 
         try {
 
-
             this.getCon().put(upload_dir+fileName, remoteDir+fileName);
+            log.info("Setting  chmod 777 for uploaded file in remote dir dr ");
+            this.getCon().chmod(777, remoteDir+fileName);
             log.info("DONE COPYING FILE FROM  "+ upload_dir+fileName  +" TO  "+remoteHost+remoteDir+fileName);
 
         } catch (SftpException e) {
@@ -211,7 +227,9 @@ public class AppController {
         config.put("StrictHostKeyChecking", "no");
         session.setConfig(config);
         session.setPassword(password);
-        session.connect();
+//        session.connect();
+        session.connect(300000); // 5 mins
+
         ChannelSftp sftpChannel = (ChannelSftp) session.openChannel("sftp");
         log.info("Attempting connection to "+remoteHost);
         sftpChannel.connect();
@@ -230,6 +248,15 @@ public class AppController {
         return !obifiles.isEmpty();
     }
 
+    boolean postedBefore(String filename){
+
+        List<OBIFILE> obifiles;
+
+        obifiles= jdbcTemplate.query("SELECT * FROM FILEUPLOADS WHERE FILENAME = '"+filename+"' and STATUS ='POSTED' ", new OBIFILEMapper());
+
+
+        return !obifiles.isEmpty();
+    }
+
+
 }
-
-
