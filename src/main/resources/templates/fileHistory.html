@@ -40,12 +40,23 @@
                                     <th>CHARGE TYPE</th>
                                     <th>COUNT</th>
                                     <th>VALUE</th>
+                                    <th>VIEW MORE</th>
 
                                 </tr>
                                 </thead>
                                 <tbody>
-
-
+                                <tr th:each="charge : ${noneBulkset}">
+                                    <td th:text="${charge.getFeetype()}"></td>
+                                    <td th:text="${charge.getCount()}"></td>
+                                    <td th:text="${charge.getSum()}"></td>
+                                    <td>
+                                        <a    th:href="|/charge-history/${fileName}/${charge.getFeetype()}|" >
+                                            <button class="btn-pull-left btn btn-sm btn-primary">
+                                                OPEN
+                                            </button>
+                                        </a>
+                                    </td>
+                                </tr>
                                 </tbody>
                                 <h6>Total Count <span th:text="${nonebulked.size()}"></span> </h6>
                                 <h6>Total Value</h6>
@@ -70,12 +81,23 @@
                                     <th>CHARGE TYPE</th>
                                     <th>COUNT</th>
                                     <th>VALUE</th>
-
+                                    <th>VIEW MORE</th>
                                 </tr>
                                 </thead>
                                 <tbody>
 
-
+                                <tr th:each="charge : ${bulkset}">
+                                    <td th:text="${charge.getFeetype()}"></td>
+                                    <td th:text="${charge.getCount()}"></td>
+                                    <td th:text="${charge.getSum()}"></td>
+                                    <td>
+                                        <a    th:href="|/charge-history/${fileName}/${charge.getFeetype()}|" >
+                                            <button class="btn-pull-left btn btn-sm btn-primary">
+                                                OPEN
+                                            </button>
+                                        </a>
+                                    </td>
+                                </tr>
                                 </tbody>
                                 <h6>Total Count <span th:text="${bullked.size()}"></span> </h6>
                                 <h6>Total Value</h6>

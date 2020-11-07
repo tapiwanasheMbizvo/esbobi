@@ -1,8 +1,11 @@
 package com.tmgreyhat.esbobi.controllers;
 
 import com.jcraft.jsch.*;
+import com.tmgreyhat.esbobi.mappers.AUTOPAYMapper;
 import com.tmgreyhat.esbobi.mappers.OBIFILEMapper;
 import com.tmgreyhat.esbobi.mappers.RCMapper;
+import com.tmgreyhat.esbobi.models.AUTOPAY;
+import com.tmgreyhat.esbobi.models.BULK;
 import com.tmgreyhat.esbobi.models.OBIFILE;
 import com.tmgreyhat.esbobi.models.RCPT101;
 import lombok.extern.slf4j.Slf4j;
@@ -18,12 +21,15 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.math.BigInteger;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.util.List;
-import java.util.Properties;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.*;
 
 @Controller
 @Slf4j
@@ -35,8 +41,8 @@ public class OBIFILEController {
     private String password = "root";
     // private String hosts_dir = "C:\\Users\\gaswaj\\.ssh\\known_hosts";
     //  private String hosts_dir = "C:\\Users\\tapiwanashem\\.ssh\\known_hosts";
-    private String upload_dir = "C:\\ESB\\upload\\";
-    //private String upload_dir = "/home/ESBOBI/upload/";
+   // private String upload_dir = "C:\\ESB\\upload\\";
+    private String upload_dir = "/home/ESBOBI/upload/";
 
 
 
@@ -47,6 +53,8 @@ public class OBIFILEController {
     @Autowired
     JdbcTemplate jdbcTemplate;
 
+    Connection connection = new DBCON().getConnection();
+
 
 
     @GetMapping("obi-files")
@@ -55,7 +63,7 @@ public class OBIFILEController {
         List<OBIFILE> obifiles;
 
 
-        obifiles= jdbcTemplate.query("SELECT * FROM FILEUPLOADS  ", new OBIFILEMapper());
+        obifiles= jdbcTemplate.query("SELECT * FROM FILEUPLOADS WHERE FILE_TYPE = 'OBI'  ", new OBIFILEMapper());
 
         model.addAttribute("obifiles", obifiles);
 
@@ -65,13 +73,54 @@ public class OBIFILEController {
 
 
 
+//charge-history/OBI_20200317_120031_0002/FEEC320
+
+    @GetMapping("/charge-history/{filename}/{feetype}")
+    public String getChargeHistory(@PathVariable(name = "filename") String filename, @PathVariable(name = "feetype") String feetype, Model model){
+
+
+        List<BULK> bulkList = new ArrayList<>();
+
+
+        //we want to get all the charges for filename , with that file type  and their statuses
+
+     //so just return each transaction with is
+
+
+
+        String sql = "select * FROM RCPT101 INNER JOIN EQTRANSFER_OFFLINE ON GZNR2 = '"+filename+"'  WHERE FILE_NAME ='"+filename+" ' AND FRONT_END_TRANSACTION_TYPE = '"+feetype+"' ";
+
+        try {
+            ResultSet resultSet = connection.createStatement().executeQuery(sql);
+            while (resultSet.next()){
+                BULK bulk = new BULK();
+
+                bulk.setPcref(resultSet.getString("PCREF"));
+                bulk.setEqMessage(resultSet.getString("MSGTXT"));
+                bulk.setResponseCode(resultSet.getString("XRREC"));
+
+
+                bulkList.add(bulk);
+            }
+
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+
+        model.addAttribute("chargeList", bulkList );
+        return "charge_history";
+    }
+
     @GetMapping("/file-history/{id}")
-    public String getContents(@PathVariable(name = "id") Long id, Model model){
+    public String getContents(@PathVariable(name = "id") Long id, Model model) throws SQLException {
 
 
         List<OBIFILE> obifileList;
         List<RCPT101> bulked;
         List<RCPT101> nonebulked;
+
 
 
         log.info("Searching for transactions in file  with id  "+id);
@@ -88,19 +137,79 @@ public class OBIFILEController {
 
         OBIFILE obifile = obifileList.get(0);
 
+        String file_type = obifile.getFILE_TYPE();
+
+        if (file_type.equalsIgnoreCase("OBI")){
+
+            bulked =  jdbcTemplate.query("select * FROM RCPT101 WHERE FILE_NAME  ='"+obifile.getFILENAME()+" ' AND FRONT_END_TRANSACTION_TYPE IN (select CHARGECODE from OBICHARGE where IS_BULKED=1) ", new RCMapper());
+            nonebulked =  jdbcTemplate.query("select * FROM RCPT101 WHERE FILE_NAME  ='"+obifile.getFILENAME()+" ' AND FRONT_END_TRANSACTION_TYPE IN (select CHARGECODE from OBICHARGE where IS_BULKED=0)", new RCMapper());
+
+            //bulked = jdbcTemplate.query("select FRONT_END_TRANSACTION_TYPE, count(id) , SUM(CAST(AMOUNT AS INT)) from RCPT101 WHERE FILE_NAME ='"+obifile.getFILENAME()+"' AND FRONT_END_TRANSACTION_TYPE IN (SELECT CHARGECODE FROM OBICHARGE WHERE  IS_BULKED=1) group by FRONT_END_TRANSACTION_TYPE", new RCMapper());
+
+            log.info("we got bulked "+ bulked.size());
+            log.info("we got NONE  bulked "+ nonebulked.size());
 
 
-        bulked =  jdbcTemplate.query("select * FROM RCPT101 WHERE FILE_NAME  ='"+obifile.getFILENAME()+" ' AND FRONT_END_TRANSACTION_TYPE IN (select CHARGECODE from OBICHARGE where IS_BULKED=1) ", new RCMapper());
-        nonebulked =  jdbcTemplate.query("select * FROM RCPT101 WHERE FILE_NAME  ='"+obifile.getFILENAME()+" ' AND FRONT_END_TRANSACTION_TYPE IN (select CHARGECODE from OBICHARGE where IS_BULKED=0)", new RCMapper());
-
-        log.info("we got bulked "+ bulked.size());
-        log.info("we got NONE  bulked "+ nonebulked.size());
-
-        model.addAttribute("bullked", bulked);
-        model.addAttribute("nonebulked", nonebulked);
+            String bulkedSql = "select FRONT_END_TRANSACTION_TYPE, count(id) , SUM(CAST(AMOUNT AS INT)) from RCPT101 WHERE FILE_NAME ='"+obifile.getFILENAME()+"' AND FRONT_END_TRANSACTION_TYPE IN (SELECT CHARGECODE FROM OBICHARGE WHERE  IS_BULKED=1) group by FRONT_END_TRANSACTION_TYPE" ;
+            String noneBulkedSql = "select FRONT_END_TRANSACTION_TYPE, count(id) , SUM(CAST(AMOUNT AS INT)) from RCPT101 WHERE FILE_NAME ='"+obifile.getFILENAME()+"' AND FRONT_END_TRANSACTION_TYPE IN (SELECT CHARGECODE FROM OBICHARGE WHERE  IS_BULKED=0) group by FRONT_END_TRANSACTION_TYPE" ;
+            ResultSet bulkedset = connection.createStatement().executeQuery(bulkedSql);
+            ResultSet noneBulkedset = connection.createStatement().executeQuery(noneBulkedSql);
 
 
-        return "fileHistory";
+            List<BULK> bulkList = new ArrayList<>();
+            List<BULK> noneBulkList = new ArrayList<>();
+            while (bulkedset.next()){
+
+                BULK bulk = new BULK();
+
+                bulk.setCount(BigInteger.valueOf(bulkedset.getInt(2)));
+                bulk.setFeetype(bulkedset.getString(1));
+                bulk.setSum(BigInteger.valueOf(bulkedset.getInt(3)));
+
+                bulkList.add(bulk);
+
+                log.info("  FEE TYPE "+bulkedset.getString(1)+ "  count "+ bulkedset.getInt(2)+ " sum  is "+ bulkedset.getInt(3));
+            }
+
+
+            while (noneBulkedset.next()){
+
+                BULK bulk = new BULK();
+
+                bulk.setCount(BigInteger.valueOf(noneBulkedset.getInt(2)));
+                bulk.setFeetype(noneBulkedset.getString(1));
+                bulk.setSum(BigInteger.valueOf(noneBulkedset.getInt(3)));
+
+                noneBulkList.add(bulk);
+
+            }
+
+
+
+
+
+            model.addAttribute("bullked", bulked);
+            model.addAttribute("nonebulked", nonebulked);
+            model.addAttribute("bulkset", bulkList);
+            model.addAttribute("noneBulkset", noneBulkList);
+            model.addAttribute("fileName", obifileList.get(0).getFILENAME());
+            return "fileHistory";
+        }else {
+
+            List<AUTOPAY> autopayList;
+
+            autopayList = jdbcTemplate.query("SELECT * FROM AUTOPAYMENT WHERE FILENAME = '"+obifile.getFILENAME()+"'", new AUTOPAYMapper());
+
+            model.addAttribute("autopays", autopayList);
+
+            return "auto_history";
+        }
+
+
+
+
+
+        //return "fileHistory";
     }
 
     @PostMapping("/upload")
@@ -110,63 +219,83 @@ public class OBIFILEController {
 
             model.addAttribute("msg", "No File Selected");
 
-            return "redirect:/upload-obi";
+            return "upload";
+        }
+
+       /* String extension = "";
+
+        int i = file.getOriginalFilename().lastIndexOf('.');
+        if (i > 0) {
+            extension = file.getOriginalFilename().substring(i+1);
         }
 
 
-        String fileName = StringUtils.cleanPath(file.getOriginalFilename());
-        fileName = fileName.replaceAll("_", "");
+        if(!extension.equalsIgnoreCase("txt")){
 
-        String tableName = fileName.substring(0, fileName.length() - 4);
-        tableName = tableName.toUpperCase();
-        tableName = tableName.replaceAll("_", "");
+            model.addAttribute("msg", "PLEASE UPLOAD A .txt  FILE ");
 
-        if(fileUploadedBefore(tableName)){
+            return "upload";
+        }*/
+
+
+        String fileName = StringUtils.cleanPath(file.getOriginalFilename()).toUpperCase();
+
+
+        //fileName = fileName.substring(0, fileName.length()-4).toUpperCase();
+
+
+        if(fileUploadedBefore(fileName)){
 
             model.addAttribute("msg", "FILE HAS BEEN UPLOADED BEFORE");
 
             return "upload";
         }
 
-        jdbcTemplate.execute("INSERT INTO FILEUPLOADS(FILENAME, FILE_TYPE) VALUES ('"+tableName+"', '"+file_type+"')");
+        jdbcTemplate.execute("INSERT INTO FILEUPLOADS(FILENAME, FILE_TYPE) VALUES ('"+fileName+"', '"+file_type+"')");
 
 
-        Path path = Paths.get(upload_dir + file.getOriginalFilename().replaceAll("_", "").toUpperCase());
+        Path path = Paths.get(upload_dir + file.getOriginalFilename().toUpperCase());
         try {
             Files.copy(file.getInputStream(), path, StandardCopyOption.REPLACE_EXISTING);
+
+            log.info("DONE UPLOADING TO LOCAL DIR");
+
+
+
+            if(file_type.equalsIgnoreCase("OBI")){
+                createTable(fileName);
+                log.info("Created database table "+fileName);
+                return  "redirect:/obi-files";
+            }else{
+
+                return  "redirect:/auto-files";
+            }
+
+
         } catch (IOException e) {
+            model.addAttribute("msg", "File Did not upload ");
             e.printStackTrace();
-        }
-        log.info("DONE UPLOADING TO LOCAL DIR");
-
-
-
-        if(file_type.equalsIgnoreCase("OBI")){
-            createTable(tableName);
-            log.info("Created database table "+tableName);
+            return "upload";
         }
 
 
 
-
-
-        model.addAttribute("msg", "File Uploaded");
-
-        return  "redirect:/obi-files";
 
     }
     @GetMapping("/post-file/{filename}")
     public String postFile (@PathVariable(name = "filename") String filename, Model model){
 
-        String ogfilename = filename;
+        String ogfilename = filename.toUpperCase();
         filename = filename.toUpperCase();
-        filename = filename+".TXT";
+        //filename = filename+".TXT";
         List<OBIFILE> obifiles;
 
+        String returnPath = null;
         if(postedBefore(ogfilename)){
             model.addAttribute("msg", "FILE HAS BEEN POSTED BEFORE "+filename);
 
-            return "redirect:/obi-files";
+            returnPath = "redirect:/obi-files";
+            return returnPath;
         }
         log.info("file dire "+upload_dir+filename);
 
@@ -174,10 +303,27 @@ public class OBIFILEController {
 
         String file_type = obifiles.get(0).getFILE_TYPE();
 
-        doSftpTransfr(filename, file_type);
-        jdbcTemplate.execute("UPDATE FILEUPLOADS SET POSTEDON = current_timestamp, STATUS = 'POSTED', POSTEDBY=1 WHERE FILENAME='"+ogfilename+"'");
 
-        return  "redirect:/obi-files";
+        if (file_type.equalsIgnoreCase("OBI")){
+
+            returnPath =  "redirect:/obi-files";
+        }else {
+
+            returnPath=  "redirect:/auto-files";
+        }
+
+        if(doSftpTransfr(filename, file_type)){
+
+            jdbcTemplate.execute("UPDATE FILEUPLOADS SET POSTEDON = current_timestamp, STATUS = 'POSTING', POSTEDBY=1 WHERE FILENAME='"+ogfilename+"'");
+
+
+            return  returnPath;
+        }else{
+
+            model.addAttribute("msg", "FILE HAS NOT BEEN POSTED "+filename);
+           return returnPath;
+        }
+
     }
 
     void createTable(String tableName){
@@ -201,7 +347,7 @@ public class OBIFILEController {
 
     }
 
-    void doSftpTransfr(String fileName, String file_type){
+    boolean doSftpTransfr(String fileName, String file_type){
 
         String remoteDir;
         if(file_type.equalsIgnoreCase("OBI")){
@@ -218,10 +364,14 @@ public class OBIFILEController {
             this.getCon().chmod(777, remoteDir+fileName);
             log.info("DONE COPYING FILE FROM  "+ upload_dir+fileName  +" TO  "+remoteHost+remoteDir+fileName);
 
+            return  true;
         } catch (SftpException e) {
             e.printStackTrace();
+            return  false;
         } catch (JSchException e) {
             e.printStackTrace();
+
+            return  false;
         }finally {
 
             try {

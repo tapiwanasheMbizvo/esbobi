@@ -41,6 +41,20 @@ public class AUTOPAYController {
 
         return "upload_auto";
     }
+
+
+    @GetMapping("/auto-files")
+    private  String getALLAuto(Model model){
+
+        List<OBIFILE> obifiles;
+
+
+        obifiles= jdbcTemplate.query("SELECT * FROM FILEUPLOADS WHERE FILE_TYPE = 'AUTOPAY'  ", new OBIFILEMapper());
+
+
+        model.addAttribute("files", obifiles);
+        return "all_auto";
+    }
     @PostMapping("/upload-autopay")
     public String uploadToLocalFileSystem(@RequestParam("file") MultipartFile file, Model model) {
 

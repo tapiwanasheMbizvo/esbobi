@@ -21,8 +21,25 @@ public class AUTOPAY {
             SVBOACCOUNT,
             TOTDUEPLUSLIMIT,
             TOTALAMOUNTDUE,
+            STATUS,NARRATION,
             TOTALDUEALLDAYS;
 
+
+    public String getSTATUS() {
+        return STATUS;
+    }
+
+    public void setSTATUS(String STATUS) {
+        this.STATUS = STATUS;
+    }
+
+    public String getNARRATION() {
+        return NARRATION;
+    }
+
+    public void setNARRATION(String NARRATION) {
+        this.NARRATION = NARRATION;
+    }
 
     public String getCBSACCOUNT() {
         return CBSACCOUNT;

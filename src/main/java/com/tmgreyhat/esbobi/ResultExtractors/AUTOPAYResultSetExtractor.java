@@ -32,6 +32,8 @@ public class AUTOPAYResultSetExtractor implements ResultSetExtractor {
         autopay.setTOTDUEPLUSLIMIT(resultSet.getString("TOTDUEPLUSLIMIT"));
         autopay.setTOTALAMOUNTDUE(resultSet.getString("TOTALAMOUNTDUE"));
         autopay.setTOTALDUEALLDAYS(resultSet.getString("TOTALDUEALLDAYS"));
+        autopay.setNARRATION(resultSet.getString("NARRATION"));
+        autopay.setSTATUS(resultSet.getString("STATUS"));
 
 
         return  autopay;

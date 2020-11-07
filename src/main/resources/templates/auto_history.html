@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+<head>
+    <title>FILE History</title>
+    <!-- Custom styles for this page -->
+
+</head>
+<body>
+
+<div layout:fragment="content">
+    <div class="container-fluid">
+
+        <!-- Page Heading -->
+        <div class="d-sm-flex align-items-center justify-content-between mb-4">
+            <h1 class="h3 mb-0 text-gray-800">File History</h1>
+        </div>
+
+        <!-- Content Row -->
+
+
+        <!-- Content Row -->
+
+        <div class="row">
+
+
+
+            <div class="col-lg-12 col-sm-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h6>AUTO PAYMENT FILE</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
+                                <thead>
+
+                                <tr>
+                                    <th>ACCOUNT NUMBER</th>
+                                    <th>CUSTOMER NUMBER</th>
+                                    <th>CARD NUMBER</th>
+                                    <th>STATUS</th>
+                                    <th>NARRATION</th>
+
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr th:each="autopay : ${autopays}">
+
+                                    <td th:text="${autopay.getCBSACCOUNT()}">Account Number</td>
+                                    <td th:text="${autopay.getCUSTOMERNUMBER()}">Account Number</td>
+                                    <td th:text="${autopay.getCARDNUMBER()}">Account Number</td>
+                                    <td th:text="${autopay.getSTATUS()}">Account Number</td>
+                                    <td th:text="${autopay.getNARRATION()}">Account Number</td>
+                                </tr>
+
+
+                                </tbody>
+                                <h6>Total Count <span th:text="${autopays.size()}"></span> </h6>
+                                <h6>Total Value</h6>
+                            </table>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+
+
+
+        </div>
+
+        <!-- Content Row -->
+
+
+    </div>
+</div>
+
+<!-- Page level plugins -->
+
+</body>
+</html>
