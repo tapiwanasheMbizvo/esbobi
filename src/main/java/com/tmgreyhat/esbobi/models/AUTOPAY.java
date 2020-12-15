@@ -21,9 +21,25 @@ public class AUTOPAY {
             SVBOACCOUNT,
             TOTDUEPLUSLIMIT,
             TOTALAMOUNTDUE,
-            STATUS,NARRATION,
+            STATUS,NARRATION,CREDITACC, DEBITACC,
             TOTALDUEALLDAYS;
 
+
+    public String getCREDITACC() {
+        return CREDITACC;
+    }
+
+    public void setCREDITACC(String CREDITACC) {
+        this.CREDITACC = CREDITACC;
+    }
+
+    public String getDEBITACC() {
+        return DEBITACC;
+    }
+
+    public void setDEBITACC(String DEBITACC) {
+        this.DEBITACC = DEBITACC;
+    }
 
     public String getSTATUS() {
         return STATUS;

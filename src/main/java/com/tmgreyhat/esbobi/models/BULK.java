@@ -13,7 +13,36 @@ public class BULK {
     private  String eqMessage;
     private  String pcref;
 
+    private String  creditAcc;
+    private String  debitAcc;
+    private String retrevial_ref;
+
     private  BigInteger id;
+
+
+    public String getRetrevial_ref() {
+        return retrevial_ref;
+    }
+
+    public void setRetrevial_ref(String retrevial_ref) {
+        this.retrevial_ref = retrevial_ref;
+    }
+
+    public String getCreditAcc() {
+        return creditAcc;
+    }
+
+    public void setCreditAcc(String creditAcc) {
+        this.creditAcc = creditAcc;
+    }
+
+    public String getDebitAcc() {
+        return debitAcc;
+    }
+
+    public void setDebitAcc(String debitAcc) {
+        this.debitAcc = debitAcc;
+    }
 
     public BigInteger getId() {
         return id;

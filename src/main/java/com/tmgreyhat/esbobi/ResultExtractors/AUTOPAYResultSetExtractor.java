@@ -34,6 +34,9 @@ public class AUTOPAYResultSetExtractor implements ResultSetExtractor {
         autopay.setTOTALDUEALLDAYS(resultSet.getString("TOTALDUEALLDAYS"));
         autopay.setNARRATION(resultSet.getString("NARRATION"));
         autopay.setSTATUS(resultSet.getString("STATUS"));
+       /* autopay.setDEBITACC(resultSet.getString("")+resultSet.getString("")+resultSet.getString(""));
+        autopay.setCREDITACC(resultSet.getString("")+resultSet.getString("")+resultSet.getString(""));*/
+
 
 
         return  autopay;

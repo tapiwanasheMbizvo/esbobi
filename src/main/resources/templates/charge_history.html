@@ -38,6 +38,8 @@
 
                                 <tr>
                                     <th>PCREF</th>
+                                    <th>DEBIT ACC</th>
+                                    <th>CREDIT ACC</th>
                                     <th>EQ RESPONSE</th>
                                     <th>RESPONSE CODE</th>
 
@@ -48,6 +50,8 @@
                                 <tr th:each="charge : ${chargeList}">
 
                                     <td th:text="${charge.getPcref()}"></td>
+                                    <td th:text="${charge.getDebitAcc()}"></td>
+                                    <td th:text="${charge.getCreditAcc()}"></td>
                                     <td th:text="${charge.getEqMessage()}"></td>
                                     <td th:text="${charge.getResponseCode()}"></td>
                                 </tr>

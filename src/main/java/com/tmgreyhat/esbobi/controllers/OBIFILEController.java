@@ -9,6 +9,7 @@ import com.tmgreyhat.esbobi.models.BULK;
 import com.tmgreyhat.esbobi.models.OBIFILE;
 import com.tmgreyhat.esbobi.models.RCPT101;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.tomcat.util.http.fileupload.FileUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Controller;
@@ -19,9 +20,12 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
+import sun.nio.cs.StandardCharsets;
 
-import java.io.IOException;
+import java.io.*;
 import java.math.BigInteger;
+import java.nio.charset.Charset;
+import java.nio.charset.CoderMalfunctionError;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -30,6 +34,7 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
+import java.util.stream.Stream;
 
 @Controller
 @Slf4j
@@ -82,30 +87,44 @@ public class OBIFILEController {
         List<BULK> bulkList = new ArrayList<>();
 
 
-        //we want to get all the charges for filename , with that file type  and their statuses
 
-     //so just return each transaction with is
+        String sql = "select * from EQTRANSFER_OFFLINE where PCREF in (select right(REFERENCE_REF, 15) from RCPT101 where FILE_NAME='"+filename+"' and FRONT_END_TRANSACTION_TYPE='"+feetype+"')";
+        String sql2 = "select * from EQTRANSFER_OFFLINE where GZNR2='"+filename+"' AND GZNR1='"+feetype+"'";
 
-
-
-        String sql = "select * FROM RCPT101 INNER JOIN EQTRANSFER_OFFLINE ON GZNR2 = '"+filename+"'  WHERE FILE_NAME ='"+filename+" ' AND FRONT_END_TRANSACTION_TYPE = '"+feetype+"' ";
 
         try {
+
+            Connection connection = new DBCON().getConnection();
             ResultSet resultSet = connection.createStatement().executeQuery(sql);
+
+            if(!resultSet.next()){
+
+                resultSet = connection.createStatement().executeQuery(sql2);
+            }
             while (resultSet.next()){
                 BULK bulk = new BULK();
+
 
                 bulk.setPcref(resultSet.getString("PCREF"));
                 bulk.setEqMessage(resultSet.getString("MSGTXT"));
                 bulk.setResponseCode(resultSet.getString("XRREC"));
+                bulk.setCreditAcc(resultSet.getString("GZAB2")+resultSet.getString("GZAN2")+resultSet.getString("GZAS2") );
+                bulk.setDebitAcc(resultSet.getString("GZAB1")+resultSet.getString("GZAN1")+resultSet.getString("GZAS1") );
 
 
                 bulkList.add(bulk);
             }
 
 
+
         } catch (SQLException e) {
             e.printStackTrace();
+        }finally {
+            try {
+                connection.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
         }
 
 
@@ -152,48 +171,56 @@ public class OBIFILEController {
 
             String bulkedSql = "select FRONT_END_TRANSACTION_TYPE, count(id) , SUM(CAST(AMOUNT AS INT)) from RCPT101 WHERE FILE_NAME ='"+obifile.getFILENAME()+"' AND FRONT_END_TRANSACTION_TYPE IN (SELECT CHARGECODE FROM OBICHARGE WHERE  IS_BULKED=1) group by FRONT_END_TRANSACTION_TYPE" ;
             String noneBulkedSql = "select FRONT_END_TRANSACTION_TYPE, count(id) , SUM(CAST(AMOUNT AS INT)) from RCPT101 WHERE FILE_NAME ='"+obifile.getFILENAME()+"' AND FRONT_END_TRANSACTION_TYPE IN (SELECT CHARGECODE FROM OBICHARGE WHERE  IS_BULKED=0) group by FRONT_END_TRANSACTION_TYPE" ;
-            ResultSet bulkedset = connection.createStatement().executeQuery(bulkedSql);
-            ResultSet noneBulkedset = connection.createStatement().executeQuery(noneBulkedSql);
+
+            ResultSet bulkedset = null;
+            ResultSet noneBulkedset  = null;
+
+            try {
+
+                Connection connection = new DBCON().getConnection();
+
+                bulkedset = connection.createStatement().executeQuery(bulkedSql);
+                noneBulkedset  = connection.createStatement().executeQuery(noneBulkedSql);
 
 
-            List<BULK> bulkList = new ArrayList<>();
-            List<BULK> noneBulkList = new ArrayList<>();
-            while (bulkedset.next()){
+                List<BULK> bulkList = new ArrayList<>();
+                List<BULK> noneBulkList = new ArrayList<>();
+                while (bulkedset.next()){
 
-                BULK bulk = new BULK();
+                    BULK bulk = new BULK();
 
-                bulk.setCount(BigInteger.valueOf(bulkedset.getInt(2)));
-                bulk.setFeetype(bulkedset.getString(1));
-                bulk.setSum(BigInteger.valueOf(bulkedset.getInt(3)));
+                    bulk.setCount(BigInteger.valueOf(bulkedset.getInt(2)));
+                    bulk.setFeetype(bulkedset.getString(1));
+                    bulk.setSum(BigInteger.valueOf(bulkedset.getInt(3)));
 
-                bulkList.add(bulk);
+                    bulkList.add(bulk);
 
-                log.info("  FEE TYPE "+bulkedset.getString(1)+ "  count "+ bulkedset.getInt(2)+ " sum  is "+ bulkedset.getInt(3));
+                    log.info("  FEE TYPE "+bulkedset.getString(1)+ "  count "+ bulkedset.getInt(2)+ " sum  is "+ bulkedset.getInt(3));
+                }
+                while (noneBulkedset.next()){
+
+                    BULK bulk = new BULK();
+
+                    bulk.setCount(BigInteger.valueOf(noneBulkedset.getInt(2)));
+                    bulk.setFeetype(noneBulkedset.getString(1));
+                    bulk.setSum(BigInteger.valueOf(noneBulkedset.getInt(3)));
+
+                    noneBulkList.add(bulk);
+
+                }
+                model.addAttribute("bullked", bulked);
+                model.addAttribute("nonebulked", nonebulked);
+                model.addAttribute("bulkset", bulkList);
+                model.addAttribute("noneBulkset", noneBulkList);
+                model.addAttribute("fileName", obifileList.get(0).getFILENAME());
+                return "fileHistory";
+
+            }finally {
+                connection.close();
             }
 
 
-            while (noneBulkedset.next()){
 
-                BULK bulk = new BULK();
-
-                bulk.setCount(BigInteger.valueOf(noneBulkedset.getInt(2)));
-                bulk.setFeetype(noneBulkedset.getString(1));
-                bulk.setSum(BigInteger.valueOf(noneBulkedset.getInt(3)));
-
-                noneBulkList.add(bulk);
-
-            }
-
-
-
-
-
-            model.addAttribute("bullked", bulked);
-            model.addAttribute("nonebulked", nonebulked);
-            model.addAttribute("bulkset", bulkList);
-            model.addAttribute("noneBulkset", noneBulkList);
-            model.addAttribute("fileName", obifileList.get(0).getFILENAME());
-            return "fileHistory";
         }else {
 
             List<AUTOPAY> autopayList;
@@ -205,15 +232,11 @@ public class OBIFILEController {
             return "auto_history";
         }
 
-
-
-
-
-        //return "fileHistory";
     }
 
     @PostMapping("/upload")
     public String uploadToLocalFileSystem(@RequestParam("file") MultipartFile file,@RequestParam("file_type") String file_type, Model model) {
+
 
         if (file.isEmpty()){
 
@@ -221,47 +244,26 @@ public class OBIFILEController {
 
             return "upload";
         }
-
-       /* String extension = "";
-
-        int i = file.getOriginalFilename().lastIndexOf('.');
-        if (i > 0) {
-            extension = file.getOriginalFilename().substring(i+1);
-        }
-
-
-        if(!extension.equalsIgnoreCase("txt")){
-
-            model.addAttribute("msg", "PLEASE UPLOAD A .txt  FILE ");
-
-            return "upload";
-        }*/
-
-
         String fileName = StringUtils.cleanPath(file.getOriginalFilename()).toUpperCase();
-
-
-        //fileName = fileName.substring(0, fileName.length()-4).toUpperCase();
-
-
         if(fileUploadedBefore(fileName)){
 
             model.addAttribute("msg", "FILE HAS BEEN UPLOADED BEFORE");
 
             return "upload";
         }
-
-        jdbcTemplate.execute("INSERT INTO FILEUPLOADS(FILENAME, FILE_TYPE) VALUES ('"+fileName+"', '"+file_type+"')");
-
-
         Path path = Paths.get(upload_dir + file.getOriginalFilename().toUpperCase());
         try {
             Files.copy(file.getInputStream(), path, StandardCopyOption.REPLACE_EXISTING);
 
             log.info("DONE UPLOADING TO LOCAL DIR");
 
+            if(file_type.equalsIgnoreCase("OBI")){
+
+                splitFiles(fileName.toUpperCase());
+            }
 
 
+            jdbcTemplate.execute("INSERT INTO FILEUPLOADS(FILENAME, FILE_TYPE) VALUES ('"+fileName+"', '"+file_type+"')");
             if(file_type.equalsIgnoreCase("OBI")){
                 createTable(fileName);
                 log.info("Created database table "+fileName);
@@ -270,24 +272,18 @@ public class OBIFILEController {
 
                 return  "redirect:/auto-files";
             }
-
-
         } catch (IOException e) {
             model.addAttribute("msg", "File Did not upload ");
             e.printStackTrace();
             return "upload";
         }
-
-
-
-
     }
+
     @GetMapping("/post-file/{filename}")
     public String postFile (@PathVariable(name = "filename") String filename, Model model){
 
         String ogfilename = filename.toUpperCase();
         filename = filename.toUpperCase();
-        //filename = filename+".TXT";
         List<OBIFILE> obifiles;
 
         String returnPath = null;
@@ -312,7 +308,28 @@ public class OBIFILEController {
             returnPath=  "redirect:/auto-files";
         }
 
-        if(doSftpTransfr(filename, file_type)){
+
+
+        //lets take all the files matching the name and
+
+
+
+        if(file_type.equalsIgnoreCase("OBI")){
+            String filePath = "/var/stage/"+filename+"/";
+            File directoryPath = new File(filePath);
+            String contents[] = directoryPath.list();
+
+            postmany(contents, filename ,file_type);
+
+        }else{
+            doSftpTransfr(filename, file_type);
+
+        }
+
+        jdbcTemplate.execute("UPDATE FILEUPLOADS SET POSTEDON = current_timestamp, STATUS = 'POSTING', POSTEDBY=1 WHERE FILENAME='"+ogfilename+"'");
+
+
+      /* if(doSftpTransfr(filename, file_type)){
 
             jdbcTemplate.execute("UPDATE FILEUPLOADS SET POSTEDON = current_timestamp, STATUS = 'POSTING', POSTEDBY=1 WHERE FILENAME='"+ogfilename+"'");
 
@@ -322,7 +339,9 @@ public class OBIFILEController {
 
             model.addAttribute("msg", "FILE HAS NOT BEEN POSTED "+filename);
            return returnPath;
-        }
+        }*/
+
+        return returnPath;
 
     }
 
@@ -347,7 +366,190 @@ public class OBIFILEController {
 
     }
 
+
+
+    void splitFiles(String fileName ) throws IOException {
+        String uploadPath = "/var/stage/"+fileName+"/";
+        File dir = new File(uploadPath);
+
+        if(dir.mkdirs()){
+
+            log.info("CREATED DIR"+uploadPath);
+        }else{
+
+            log.info("FAILED TO CREATE DR "+uploadPath);
+        }
+
+
+        //Stream stream =  Files.lines(Paths.get(upload_dir+fileName)).filter(str->str.startsWith("RCTP10"));
+
+        //File file = new File(upload_dir+fileName);
+
+        BufferedReader reader;
+
+        reader = new BufferedReader(new FileReader(upload_dir+fileName));
+
+        String line = reader.readLine();
+        int fileNumber=0, countperFile =0, rcptCount=0;
+        FileOutputStream fileStream = new FileOutputStream(new File(uploadPath+fileName+"FPART"+fileNumber));
+        String file_partname = fileName+"FPART"+fileNumber;
+        jdbcTemplate.execute("INSERT INTO PART_FILES (FILE_PART_NAME, FILE_NAME) VALUES('"+file_partname+"', '"+fileName+"')");
+        OutputStreamWriter myWriter = new OutputStreamWriter(fileStream, "Cp1252");
+        while (line!=null){
+
+            System.out.println("WE GOT GENERIC "+ line);
+
+            if (line.startsWith("RCTP10")){
+                System.out.println("WE RCPT10 "+ line);
+                rcptCount = rcptCount+1;
+                try {
+
+
+
+                    myWriter.write(line);
+                    myWriter.write(System.getProperty("line.separator"));
+                    myWriter.flush();
+
+                    if (countperFile>10000){
+                        fileNumber = fileNumber+1;
+                        fileStream = new FileOutputStream(new File(uploadPath+fileName+"FPART"+fileNumber));
+
+                        myWriter = new OutputStreamWriter(fileStream, "Cp1252");
+                        myWriter.write(line);
+                        myWriter.write(System.getProperty("line.separator"));
+                        myWriter.flush();
+                        countperFile = 0;
+                        file_partname = fileName+"FPART"+fileNumber;
+                        jdbcTemplate.execute("INSERT INTO PART_FILES (FILE_PART_NAME, FILE_NAME) VALUES('"+file_partname+"', '"+fileName+"')");
+                    }
+
+                    countperFile =countperFile+1;
+
+
+
+                    // save the file and the filename in the part_files and set status as PENDING(DEFAULT)
+                    //after reading E.O.D in ESB mark this part file as posted
+                    //check if all the part files mathcig file name have been marked as posted and then DO BULK
+
+
+
+
+                    //save  THE FILE PARTS , filename , file path
+
+
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+
+            line = reader.readLine();
+
+        }
+
+        System.out.println("WE GOT "+rcptCount);
+
+       /* Iterator<String> iterator = stream.iterator();
+
+        while (iterator.hasNext()){
+            log.info("WE GOT  "+iterator.next());
+        }*/
+
+        /*int countperFile = 0;
+        int fileNumber = 0;
+
+        try {
+            //FileWriter myWriter = new FileWriter(uploadPath+fileName+"FPART"+fileNumber);
+            FileOutputStream fileStream = new FileOutputStream(new File(uploadPath+fileName+"FPART"+fileNumber));
+            OutputStreamWriter myWriter = new OutputStreamWriter(fileStream, "Cp1252");
+
+            //myWriter.getEncoding().replace()
+//cs.newDecoder().onMalformedInput(CodingErrorAction.REPLACE).onUnmappableCharacter(CodingErrorAction.REPLACE)
+
+
+            while (iterator.hasNext()){
+
+                log.info(iterator.next());
+
+                myWriter.write(iterator.next());
+                myWriter.write(System.getProperty("line.separator"));
+                myWriter.flush();
+
+                if(countperFile>10000){
+
+                    fileNumber = fileNumber+1;
+                //    myWriter = new FileWriter(uploadPath+fileName+"FPART"+fileNumber);
+                    fileStream = new FileOutputStream(new File(uploadPath+fileName+"FPART"+fileNumber));
+                    myWriter = new OutputStreamWriter(fileStream, "Cp1252");
+                    myWriter.write(iterator.next());
+                    myWriter.write(System.getProperty("line.separator"));
+                    myWriter.flush();
+                    countperFile = 0;
+                }
+                countperFile =countperFile+1;
+            }
+
+            String file_partname = fileName+"FPART"+fileNumber;
+
+            // save the file and the filename in the part_files and set status as PENDING(DEFAULT)
+            //after reading E.O.D in ESB mark this part file as posted
+            //check if all the part files mathcig file name have been marked as posted and then DO BULK
+
+
+            jdbcTemplate.execute("INSERT INTO PART_FILES (FILE_PART_NAME, FILE_NAME) VALUES('"+file_partname+"', '"+fileName+"')");
+
+            //save  THE FILE PARTS , filename , file path
+
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }*/
+
+
+    }
+
+
+    boolean  postmany(String dir[], String fileName, String file_type){
+
+        log.info("commence posting ");
+        log.info("have "+dir.length+" total files");
+        String file_dir;
+
+        file_dir = "/var/stage/"+fileName+"/";
+        String remoteDir;
+        if(file_type.equalsIgnoreCase("OBI")){
+
+            remoteDir = remoteDirOBI;
+        }else{
+
+            remoteDir = remoteDirAUTOPAY;
+        }
+
+        int postCount = 0;
+        for (String file : dir) {
+
+
+            try {
+                log.info("upload "+file);
+                this.getCon().put(file_dir+file, remoteDir+file);
+                postCount = postCount+1;
+                log.info("DONE COPYING  "+file +" from "+file_dir+file+ "  to "+ remoteDir+file);
+                this.getCon().chmod(777, remoteDir+file);
+            } catch (JSchException e) {
+                e.printStackTrace();
+            } catch (SftpException e) {
+                e.printStackTrace();
+            }
+        }
+
+
+        return postCount==dir.length;
+
+        //so we must check if all the files in the dir where posted
+
+    }
     boolean doSftpTransfr(String fileName, String file_type){
+
+
 
         String remoteDir;
         if(file_type.equalsIgnoreCase("OBI")){
