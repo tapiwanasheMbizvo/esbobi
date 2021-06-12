@@ -55,15 +55,9 @@ public class UPLOADER {
             for (Row row : sheet){
                 if(row.getRowNum()>=1924){
                     DataFormatter formatter = new DataFormatter();
-
                     String TERMINALID,	ACCOUNTNO,APPLYDISCOUNT 	,DISCOUNT,	IPADDRESS,	MAXIMUMTXNAMOUNT,	NAME,	POSTINGBRANCH,	SOURCE,	STATUS,	TERMINALREPLYQUEUE,	TERMINALSOURCE_SOURCE,	USDACCOUNTNO;
-
-                    //double APPLYDISCOUNT;
                     TERMINALID = row.getCell(0).getStringCellValue();
                     ACCOUNTNO = row.getCell(1).getStringCellValue();
-                   // APPLYDISCOUNT = Double.valueOf( row.getCell(2).getStringCellValue());
-                   // DISCOUNT =String.valueOf(row.getCell(3).getStringCellValue());
-
                     DISCOUNT = formatter.formatCellValue(row.getCell(1));
                     APPLYDISCOUNT = formatter.formatCellValue(row.getCell(1));
                     IPADDRESS = row.getCell(4).getStringCellValue();
@@ -75,12 +69,6 @@ public class UPLOADER {
                     TERMINALREPLYQUEUE = row.getCell(10).getStringCellValue();
                     TERMINALSOURCE_SOURCE = row.getCell(11).getStringCellValue();
                     USDACCOUNTNO = row.getCell(12).getStringCellValue();
-
-
-
-                    //int apply= Integer.valueOf(APPLYDISCOUNT);
-                    //double disc = Double.valueOf(DISCOUNT);
-
                     log.info("Terminal ID "+TERMINALID+" ACCOUNT NU "+ACCOUNTNO);
 
                     String sql = "insert into TERMINAL (TERMINALID, ACCOUNTNO, IPADDRESS, MAXIMUMTXNAMOUNT, NAME, POSTINGBRANCH, SOURCE, STATUS, TERMINALREPLYQUEUE, TERMINALSOURCE_SOURCE, USDACCOUNTNO)\n" +
@@ -95,6 +83,11 @@ public class UPLOADER {
             e.printStackTrace();
         }
     }
+
+
+
+
+
     @GetMapping("/file-uploader")
     public void postUploader(){
 

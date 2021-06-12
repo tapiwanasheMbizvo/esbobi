@@ -34,7 +34,12 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import static org.codehaus.groovy.runtime.InvokerHelper.write;
 
 @Controller
 @Slf4j
@@ -234,6 +239,30 @@ public class OBIFILEController {
 
     }
 
+
+
+   /* @PostMapping("/uploadTest")
+    private String  uploadFileToLocalSystemAndSplitIT(@RequestParam("file") MultipartFile file, @RequestParam("file_type") String file_type, Model model){
+
+
+        if(file.isEmpty()){
+
+            model.addAttribute("msg", "PLease Select A File ");
+            return "upload";
+        }
+        String fileName = StringUtils.cleanPath(file.getOriginalFilename()).toUpperCase();
+
+        fileName = makeFilename(fileName);
+        if(fileUploadedBefore(fileName)){
+
+            model.addAttribute("msg", "FILE HAS BEEN UPLOADED BEFORE");
+
+            return "upload";
+        }
+
+
+    }*/
+
     @PostMapping("/upload")
     public String uploadToLocalFileSystem(@RequestParam("file") MultipartFile file,@RequestParam("file_type") String file_type, Model model) {
 
@@ -245,13 +274,16 @@ public class OBIFILEController {
             return "upload";
         }
         String fileName = StringUtils.cleanPath(file.getOriginalFilename()).toUpperCase();
+
+        fileName = makeFilename(fileName);
+
         if(fileUploadedBefore(fileName)){
 
             model.addAttribute("msg", "FILE HAS BEEN UPLOADED BEFORE");
 
             return "upload";
         }
-        Path path = Paths.get(upload_dir + file.getOriginalFilename().toUpperCase());
+        Path path = Paths.get(upload_dir + makeFilename(file.getOriginalFilename()).toUpperCase());
         try {
             Files.copy(file.getInputStream(), path, StandardCopyOption.REPLACE_EXISTING);
 
@@ -260,6 +292,7 @@ public class OBIFILEController {
             if(file_type.equalsIgnoreCase("OBI")){
 
                 splitFiles(fileName.toUpperCase());
+                splitAndFile(fileName.toUpperCase());
             }
 
 
@@ -279,6 +312,95 @@ public class OBIFILEController {
         }
     }
 
+
+    private void splitFileAndSendToMQ(String fileName){
+
+        fileName = makeFilename(fileName);
+
+        Predicate<String> filterPattern = s-> s!=null && s.startsWith("RCTP10");
+
+        try {
+
+            File file = new File(upload_dir+fileName);
+            BufferedReader reader = new BufferedReader(new FileReader(file));
+            final  List<String> messages = reader.lines().filter(filterPattern).collect(Collectors.toList());
+
+            final String mainFileName = fileName;
+            messages.stream().parallel().forEach(message->{
+                //do  send this message to MQ
+                final String rctp10Message = mainFileName+message;
+
+                System.out.println("WRITING MESSAGE "+rctp10Message+" TO IBM MQ ");
+
+            });
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+
+    }
+
+    private  void splitAndFile(String fileName) throws FileNotFoundException {
+
+        fileName = makeFilename(fileName);
+        String uploadPath = "/var/stage/"+fileName+"/";
+
+        File dir = new File(uploadPath);
+
+        if(dir.mkdirs()){
+
+            log.info("CREATED DIR"+uploadPath);
+        }else{
+
+            log.info("FAILED TO CREATE DR "+uploadPath);
+        }
+
+        Predicate<String> filterPattern =(s -> s!=null && s.startsWith("RCTP10"));
+        try(BufferedReader reader = new BufferedReader(new FileReader(new File(upload_dir+fileName)))) {
+            final List<String>  messages = reader.lines().filter(filterPattern).collect(Collectors.toList());
+            final AtomicInteger counter = new AtomicInteger();
+            final int theChunkSize = 10000;
+
+
+
+            //collect the messages in groups of 10K
+            final  Collection<List<String>> messageCollection = messages.stream().collect(Collectors.groupingBy(it->counter.getAndIncrement()/theChunkSize)).values();
+
+            //for each group of 10K messages write a seperate file
+
+            final AtomicInteger thecounter = new AtomicInteger();
+            //FileOutputStream fileStream = new FileOutputStream(new File(uploadPath+fileName+"FPART"+fileNumber));
+            final String  theMainFilename = fileName;
+            messageCollection.forEach(strings -> {
+
+                try {
+                    String filename = theMainFilename+"FPART"+thecounter.getAndIncrement();
+                    BufferedWriter writer = new BufferedWriter(new FileWriter(uploadPath+filename));
+                    jdbcTemplate.execute("INSERT INTO PART_FILES (FILE_PART_NAME, FILE_NAME) VALUES('"+filename+"', '"+theMainFilename+"')");
+                    System.out.println("Creating and wring fle "+filename);
+                    strings.forEach(s-> {
+                        try {
+                            writer.write(theMainFilename+s);
+                            writer.newLine();
+                            writer.flush();
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    });
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+
+
+            });
+
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+    }
+
+
     @GetMapping("/post-file/{filename}")
     public String postFile (@PathVariable(name = "filename") String filename, Model model){
 
@@ -286,6 +408,8 @@ public class OBIFILEController {
         filename = filename.toUpperCase();
         List<OBIFILE> obifiles;
 
+        filename = makeFilename(filename);
+        ogfilename = makeFilename(ogfilename);
         String returnPath = null;
         if(postedBefore(ogfilename)){
             model.addAttribute("msg", "FILE HAS BEEN POSTED BEFORE "+filename);
@@ -316,6 +440,7 @@ public class OBIFILEController {
 
         if(file_type.equalsIgnoreCase("OBI")){
             String filePath = "/var/stage/"+filename+"/";
+
             File directoryPath = new File(filePath);
             String contents[] = directoryPath.list();
 
@@ -369,7 +494,11 @@ public class OBIFILEController {
 
 
     void splitFiles(String fileName ) throws IOException {
+
+
+        fileName = makeFilename(fileName);
         String uploadPath = "/var/stage/"+fileName+"/";
+
         File dir = new File(uploadPath);
 
         if(dir.mkdirs()){
@@ -381,14 +510,8 @@ public class OBIFILEController {
         }
 
 
-        //Stream stream =  Files.lines(Paths.get(upload_dir+fileName)).filter(str->str.startsWith("RCTP10"));
-
-        //File file = new File(upload_dir+fileName);
-
         BufferedReader reader;
-
         reader = new BufferedReader(new FileReader(upload_dir+fileName));
-
         String line = reader.readLine();
         int fileNumber=0, countperFile =0, rcptCount=0;
         FileOutputStream fileStream = new FileOutputStream(new File(uploadPath+fileName+"FPART"+fileNumber));
@@ -406,7 +529,10 @@ public class OBIFILEController {
 
 
 
-                    myWriter.write(line);
+
+                  //  myWriter.write(fileName+line);
+                    fileName = makeFilename(fileName);
+                    myWriter.write(fileName+line);
                     myWriter.write(System.getProperty("line.separator"));
                     myWriter.flush();
 
@@ -415,7 +541,7 @@ public class OBIFILEController {
                         fileStream = new FileOutputStream(new File(uploadPath+fileName+"FPART"+fileNumber));
 
                         myWriter = new OutputStreamWriter(fileStream, "Cp1252");
-                        myWriter.write(line);
+                        myWriter.write(fileName+line);
                         myWriter.write(System.getProperty("line.separator"));
                         myWriter.flush();
                         countperFile = 0;
@@ -424,17 +550,6 @@ public class OBIFILEController {
                     }
 
                     countperFile =countperFile+1;
-
-
-
-                    // save the file and the filename in the part_files and set status as PENDING(DEFAULT)
-                    //after reading E.O.D in ESB mark this part file as posted
-                    //check if all the part files mathcig file name have been marked as posted and then DO BULK
-
-
-
-
-                    //save  THE FILE PARTS , filename , file path
 
 
                 } catch (IOException e) {
@@ -514,6 +629,7 @@ public class OBIFILEController {
         log.info("have "+dir.length+" total files");
         String file_dir;
 
+        fileName = makeFilename(fileName);
         file_dir = "/var/stage/"+fileName+"/";
         String remoteDir;
         if(file_type.equalsIgnoreCase("OBI")){
@@ -548,8 +664,7 @@ public class OBIFILEController {
 
     }
     boolean doSftpTransfr(String fileName, String file_type){
-
-
+        fileName =makeFilename(fileName);
 
         String remoteDir;
         if(file_type.equalsIgnoreCase("OBI")){
@@ -608,6 +723,7 @@ public class OBIFILEController {
 
     boolean fileUploadedBefore(String file_name){
 
+        file_name = makeFilename(file_name);
         List<OBIFILE> obifiles;
 
         obifiles= jdbcTemplate.query("SELECT * FROM FILEUPLOADS WHERE FILENAME = '"+file_name+"' ", new OBIFILEMapper());
@@ -618,12 +734,37 @@ public class OBIFILEController {
 
     boolean postedBefore(String filename){
 
+        filename = makeFilename(filename);
         List<OBIFILE> obifiles;
 
         obifiles= jdbcTemplate.query("SELECT * FROM FILEUPLOADS WHERE FILENAME = '"+filename+"' and STATUS ='POSTED' ", new OBIFILEMapper());
 
 
         return !obifiles.isEmpty();
+    }
+
+    private String makeFilename (String inputFilename){
+
+        inputFilename = inputFilename.toUpperCase();
+
+        if(inputFilename.length()==24){
+
+            return  inputFilename;
+        }
+        if(inputFilename.length()>24){
+
+            return  inputFilename.substring(0,24);
+        }
+
+        StringBuilder stringBuilder = new StringBuilder(inputFilename);
+
+        while (stringBuilder.length()<24){
+
+            stringBuilder.append("0");
+        }
+
+        return  stringBuilder.toString();
+
     }
 
 
